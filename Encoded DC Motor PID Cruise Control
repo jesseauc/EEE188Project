@@ -1,0 +1,180 @@
+//EEE 188 Project - Cruise Control Robot
+//Written by Jesse Aucelluzzo
+
+//Encoder library allows proper operation of encoder
+#include <MD_REncoder.h>
+
+//PID library allows proper operation of feedback system
+#include <PID_v1.h>
+
+
+//Declare all variable
+double SetpointL33, InputL33, OutputL33, SetpointR33, InputR33, OutputR33, SetpointL75, InputL75, OutputL75, SetpointR75, InputR75, OutputR75, gap;
+
+//Sampling Time
+int time=5;
+
+//Pre-defined aggressive and conservative PID gains from library
+double aggKp=4, aggKi=0.2, aggKd=1;
+double consKp=1, consKi=0.05, consKd=0.25;
+
+//PID functions for 33% duty cycle
+PID setSpeedL33(&InputL33, &OutputL33, &SetpointL33, consKp, consKi, consKd, DIRECT);
+
+PID setSpeedR33(&InputR33, &OutputR33, &SetpointR33, consKp, consKi, consKd, DIRECT);
+
+//PID functions for 75% duty cycle
+PID setSpeedL75(&InputL75, &OutputL75, &SetpointL75, consKp, consKi, consKd, DIRECT);
+
+PID setSpeedR75(&InputR75, &OutputR75, &SetpointR75, consKp, consKi, consKd, DIRECT);
+
+//Define Motor pins
+#define MotorLenable 10
+#define MotorRenable 11
+#define MotorLinput1 8
+#define MotorLinput2 9
+#define MotorRinput1 12
+#define MotorRinput2 13
+
+//Define encoder pins
+#define MotorLencoderA 2
+#define MotorLencoderB 4
+#define MotorRencoderA 3
+#define MotorRencoderB 5
+
+//Encoder functions for left and right wheel
+MD_REncoder encoderL(2,4);
+MD_REncoder encoderR(3,5);
+
+void setup() {
+  Serial.begin(9600);
+
+  //85/255 = 33% duty cycle
+  SetpointL33 = 85;
+  SetpointR33 = 85;
+
+  //192/255 = 75% duty cycle
+  SetpointL75 = 192;
+  SetpointR75 = 192;
+
+  //Define as output pinns
+  pinMode(MotorLenable,OUTPUT);
+  pinMode(MotorRenable,OUTPUT);
+  pinMode(MotorLinput1,OUTPUT);
+  pinMode(MotorLinput2,OUTPUT);
+  pinMode(MotorRinput1,OUTPUT);
+  pinMode(MotorRinput2,OUTPUT);
+
+  //Define as input pins
+  pinMode(MotorLencoderA,INPUT);
+  pinMode(MotorLencoderB,INPUT);
+  pinMode(MotorRencoderA,INPUT);
+  pinMode(MotorRencoderB,INPUT);
+
+  //Begin PID's
+  setSpeedL33.SetMode(AUTOMATIC);
+  setSpeedL33.SetSampleTime(time);
+  setSpeedR33.SetMode(AUTOMATIC);
+  setSpeedR33.SetSampleTime(time);
+  setSpeedL75.SetMode(AUTOMATIC);
+  setSpeedL75.SetSampleTime(time);
+  setSpeedR75.SetMode(AUTOMATIC);
+  setSpeedR75.SetSampleTime(time);
+
+  //Begin encoders
+  encoderL.begin();
+  encoderR.begin();
+}
+
+
+void loop() {
+  if(digitalRead(6)) //Begins when switch 1 clicked
+  {
+    //Makes robot move forward
+    digitalWrite(8,HIGH);
+    digitalWrite(12,HIGH);
+    digitalWrite(9,LOW);
+    digitalWrite(13,LOW);
+  
+    InputL33 = encoderL.read(); //Begin reading encoder
+
+    gap = abs(SetpointL33-InputL33); //distance away from setpoint
+  if(gap<10)
+  {  
+    setSpeedL33.SetTunings(consKp, consKi, consKd); //Conservative gains
+  }
+  else
+  {
+     
+     setSpeedL33.SetTunings(aggKp, aggKi, aggKd); //Aggressive gains
+  }
+  
+    setSpeedL33.Compute(); //Run PID
+    analogWrite(10,OutputL33); //Change output
+  
+    InputR33 = encoderR.read(); //Begin reading encoder
+
+    gap = abs(SetpointR33-InputR33); //distance away from setpoint
+  if(gap<10)
+  {  
+    setSpeedR33.SetTunings(consKp, consKi, consKd); //Conservative gains
+  }
+  else
+  {
+     
+     setSpeedR33.SetTunings(aggKp, aggKi, aggKd); //Aggressive gains
+  }
+  
+    setSpeedR33.Compute(); //Run PID
+    analogWrite(11,OutputR33); //Change output
+  }
+
+  else if(digitalRead(7)) //Begins when switch 2 is clicked
+  {
+    //Makes robot move forwards
+    digitalWrite(8,HIGH);
+    digitalWrite(12,HIGH);
+    digitalWrite(9,LOW);
+    digitalWrite(13,LOW);
+  
+    InputL75 = encoderL.read(); //Begin reading encoder
+    
+    gap = abs(SetpointL75-InputL75); //distance away from setpoint
+  if(gap<10)
+  {  
+    setSpeedL75.SetTunings(consKp, consKi, consKd); //Conservative gains
+  }
+  else
+  {
+     
+     setSpeedL75.SetTunings(aggKp, aggKi, aggKd); //Aggressive gains
+  }
+  
+    setSpeedL75.Compute(); // Run PID
+    analogWrite(10,OutputL75); // Change output
+  
+    InputR75 = encoderR.read(); // Begin Reading encoder
+  
+    gap = abs(SetpointR75-InputR75); //distance away from setpoint
+  if(gap<10)
+  {  
+    setSpeedR75.SetTunings(consKp, consKi, consKd); //Conservative gains
+  }
+  else
+  {
+     
+     setSpeedR75.SetTunings(aggKp, aggKi, aggKd); //Aggressive gains
+  }
+  
+    setSpeedR75.Compute(); // Run PID
+    analogWrite(11,OutputR75); // Change Output
+  }
+  else
+  {
+    // Makes robot stop
+    digitalWrite(8,LOW);
+    digitalWrite(12,LOW);
+    digitalWrite(9,LOW);
+    digitalWrite(13,LOW);
+  }
+}
